@@ -111,7 +111,7 @@
   "helm interface for flymake."
   (interactive "P")
   (let ((buf (get-buffer-create helm-c-flymake-buffer))
-        (linum (format "%5d:" (line-number-at-pos (point)))))
+        (linum (format "%4d:" (line-number-at-pos (point)))))
     (helm :sources '(helm-c-source-flymake-warning
                      helm-c-source-flymake-error)
           :buffer buf
