@@ -4,7 +4,8 @@
 
 ;; Author: Akira Tamamori <tamamori5917@gmail.com>
 ;; URL: https://github.com/tam17aki
-;; Version: 0.1.6
+;; Version: 20130714.334
+;; X-Original-Version: 0.1.6
 ;; Package-Requires: ((helm "1.0"))
 
 ;; This program is free software; you can redistribute it and/or
@@ -39,6 +40,9 @@
 
 ;;; History:
 ;;
+;; Revision 0.1.7
+;; * convert prefix of helm-c-* into helm-*.
+;;
 ;; Revision 0.1.6
 ;; * fix typo.
 ;;
@@ -67,14 +71,14 @@
 (require 'flymake)
 (require 'helm)
 
-(defvar helm-c-flymake-buffer "*helm flymake*")
+(defvar helm-flymake-buffer "*helm flymake*")
 
-(defun helm-c-flymake-get-err-list ()
+(defun helm-flymake-get-err-list ()
   (loop for err-info in flymake-err-info
         for err = (nth 1 err-info)
         append err))
 
-(defun helm-c-flymake-get-candidate (err-type)
+(defun helm-flymake-get-candidate (err-type)
   (mapcar (lambda (err)
             (let* ((type (flymake-ler-type err))
                    (text (flymake-ler-text err))
@@ -86,23 +90,23 @@
                ((and (equal type err-type)
                      (equal err-type "e"))
                 (format "%4s:%s" line text)))))
-          (helm-c-flymake-get-err-list)))
+          (helm-flymake-get-err-list)))
 
-(defun helm-c-flymake-init (err-type)
+(defun helm-flymake-init (err-type)
   (helm-init-candidates-in-buffer
-   'local (helm-c-flymake-get-candidate err-type)))
+   'local (helm-flymake-get-candidate err-type)))
 
-(defvar helm-c-source-flymake-warning
+(defvar helm-source-flymake-warning
   '((name . "Flymake Warning")
-    (init . (lambda () (helm-c-flymake-init "w")))
+    (init . (lambda () (helm-flymake-init "w")))
     (candidates-in-buffer)
     (candidate-transformer . (lambda (cands) (delete "" cands)))
     (type . line)
     (recenter)))
 
-(defvar helm-c-source-flymake-error
+(defvar helm-source-flymake-error
   '((name . "Flymake Error")
-    (init . (lambda () (helm-c-flymake-init "e")))
+    (init . (lambda () (helm-flymake-init "e")))
     (candidates-in-buffer)
     (candidate-transformer . (lambda (cands) (delete "" cands)))
     (type . line)
@@ -112,10 +116,10 @@
 (defun helm-flymake (arg)
   "helm interface for flymake."
   (interactive "P")
-  (let ((buf (get-buffer-create helm-c-flymake-buffer))
+  (let ((buf (get-buffer-create helm-flymake-buffer))
         (linum (format "%4d:" (line-number-at-pos (point)))))
-    (helm :sources '(helm-c-source-flymake-warning
-                     helm-c-source-flymake-error)
+    (helm :sources '(helm-source-flymake-warning
+                     helm-source-flymake-error)
           :buffer buf
           :input (and arg linum))))
 
