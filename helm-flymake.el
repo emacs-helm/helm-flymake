@@ -1,6 +1,6 @@
 ;;; helm-flymake.el --- helm interface for flymake
 
-;; Copyright (C) 2012 Akira Tamamori
+;; Copyright (C) 2012-2013 Akira Tamamori
 
 ;; Author: Akira Tamamori <tamamori5917@gmail.com>
 ;; URL: https://github.com/tam17aki
