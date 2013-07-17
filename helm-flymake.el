@@ -4,7 +4,7 @@
 
 ;; Author: Akira Tamamori <tamamori5917@gmail.com>
 ;; URL: https://github.com/tam17aki
-;; Version: 0.1.6
+;; Version: 0.1.7
 ;; Package-Requires: ((helm "1.0"))
 
 ;; This program is free software; you can redistribute it and/or
