@@ -35,10 +35,10 @@
 
 ;;; Installation:
 ;;
-;; Add followings on your .emacs.
+;; Add this file in your `load-path' and the following to your Emacs init file:
 ;;
-;;   (require 'helm-flymake)
-;;
+;; Note: Not necessary if using ELPA package.
+;; (autoload 'helm-flymake "helm-flymake" nil t)
 
 ;;; History:
 ;;
@@ -120,7 +120,8 @@
 	 (type (flymake-diagnostic-type diag))
 	 (text (flymake-diagnostic-text diag))
 	 (line (line-number-at-pos beg)))
-    (setq msg (format "%-8d  %-12s    %s" line (helm-flymake--format-type type) text))
+    (setq msg (format "%-8d  %-12s    %s"
+                      line (helm-flymake--format-type type) text))
     (cons msg diag)))
 
 ;;;###autoload
@@ -128,10 +129,13 @@
   "Helm interface for flymake."
   (interactive)
   (helm :sources (helm-build-sync-source helm-flymake-source-name
-                   :candidates (mapcar #'helm-flymake--transforme-to-candidate (flymake-diagnostics))
-                   :action 'helm-flymake-actions)
-        :quit-if-no-candidate (lambda ()
-                                (message "No flymake diagnostics in this buffer"))
+                   :candidates (mapcar #'helm-flymake--transforme-to-candidate
+                                       (flymake-diagnostics))
+                   :action
+                   'helm-flymake-actions)
+        :quit-if-no-candidate
+        (lambda ()
+          (message "No flymake diagnostics in this buffer"))
         :buffer "*helm flymake*"))
 
 (provide 'helm-flymake)
