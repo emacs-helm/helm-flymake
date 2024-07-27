@@ -1,10 +1,14 @@
-;;; helm-flymake.el --- helm interface for flymake
+;;; helm-flymake.el --- helm sources for flymake -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2012-2013 Akira Tamamori
+;; Copyright (C) 2024 zbelial <zjyzhaojiyang@gmail.com>
 
 ;; Author: Akira Tamamori <tamamori5917@gmail.com>
-;; URL: https://github.com/tam17aki
-;; Version: 0.1.8
+
+;; Maintainer: zbelial <zjyzhaojiyang@gmail.com>
+
+;; URL: https://github.com/emacs-helm/helm-flymake
+;; Version: 0.1.9
 ;; Package-Requires: ((helm "1.0"))
 
 ;; This program is free software; you can redistribute it and/or
@@ -25,27 +29,21 @@
 ;; `helm' interface for flymake.
 ;; When `flymake-mode' is t, M-x `helm-flymake' lists warning and error
 ;; messages in *helm flymake* buffer.
-;; C-u M-x `helm-flymake' insert the line number of current cursor position
-;; into minibuffer.
-;; Within the `helm-flymake' buffer if `helm-execute-persistent-action'
-;; is executed (by default bound to C-j), then point will be moved to the
-;; line number of the selected warning/error. If you would no longer
-;; like to be at this place in the buffer, simply hit C-g to exit the
-;; `helm-flymake' mini-buffer and point will be returned to its original
-;; position.
 ;; When Enter/<return> is pressed the "default" action is executed
-;; moving point to the line of the selected warning/error and closing
+;; moving point to the line of the selected diagnostic and closing
 ;; the `helm-flymake' mini-buffer.
 
 ;;; Installation:
 ;;
 ;; Add followings on your .emacs.
 ;;
-;;   (require 'helm-config)
 ;;   (require 'helm-flymake)
 ;;
 
 ;;; History:
+;;
+;; Revision 0.1.9
+;; * Rewrite most of the code to make it work with latest flymake.
 ;;
 ;; Revision 0.1.8
 ;; * Added "goto line" feature
@@ -80,99 +78,61 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
 (require 'flymake)
 (require 'helm)
 
-(defvar helm-flymake-buffer "*helm flymake*")
+(defcustom helm-flymake-actions
+  '(("Goto flymake diagnostic" . helm-flymake-action-goto))
+  "Actions for helm-flymake."
+  :type '(alist :key-type string :value-type function))
 
-(defun helm-flymake-get-err-list ()
-  (loop for err-info in flymake-err-info
-        for err = (nth 1 err-info)
-        append err))
+(defun helm-flymake-action-goto (x)
+  "Goto where there is any diagnostic."
+  (goto-char (flymake-diagnostic-beg x))
+  (recenter))
 
-(defun helm-flymake-get-err-list-sorted ()
-  (sort (helm-flymake-get-err-list)
-        (lambda (lhs-err rhs-err)
-          (let ((lhs-line (flymake-ler-line lhs-err))
-                (rhs-line (flymake-ler-line rhs-err)))
-            (> lhs-line rhs-line)))))
+(defvar helm-flymake-source-name "Helm Flymake"
+  "Source name of helm flymake.")
 
-(defun helm-flymake-get-candidate (err-type)
-  (let ((err-list (helm-flymake-get-err-list-sorted))
-        (candidate-list))
-    (mapcar (lambda (err)
-              (let* ((type (flymake-ler-type err))
-                     (text (flymake-ler-text err))
-                     (line (flymake-ler-line err)))
-                (cond
-                 ((and (equal type err-type)
-                       (equal err-type "w"))
-                  (push (format "%s:%s" line text) candidate-list))
-                 ((and (equal type err-type)
-                       (equal err-type "e"))
-                  (push (format "%s:%s" line text) candidate-list)))))
-            err-list)
-    candidate-list))
+(defun helm-flymake--format-type (type)
+  (let (face
+	display-type
+	(type (symbol-name type)))
+    (cond
+     ((string-suffix-p "note" type)
+      (setq display-type "note")
+      (setq face 'success))
+     ((string-suffix-p "warning" type)
+      (setq display-type "warning")
+      (setq face 'warning))
+     ((string-suffix-p "error" type)
+      (setq display-type "error")
+      (setq face 'error))
+     (t
+      (setq display-type "note")
+      (setq face 'warning)))
+    (propertize (format "%s" display-type) 'face face)))
 
-(defun helm-flymake-init (err-type)
-  (helm-init-candidates-in-buffer
-   'local (helm-flymake-get-candidate err-type)))
-
-(defmacro helm-flymake-candidate-macro (candidate &rest body)
-  "Execute the forms with CANDIDATE in BODY."
-  (declare (indent 1))
-  `(progn
-     ;; extract the line number from our candidate string
-     ;; candidate format = 123:warning or error message
-     ;; match 1 = whitespace
-     ;; match 2 = line number
-     ;; match 3 = rest of the line after the :
-     (when (string-match "^\\([[:space:]]*\\)\\([0-9]+\\):\\(.*\\)$" candidate)
-       (let ((lineno (string-to-number (match-string 2 candidate))))
-         ,@body))))
-
-(defun helm-flymake-goto-line (line)
-  (goto-char (point-min))
-  (forward-line (1- line)))
-
-(defsubst helm-flymake-recenter ()
-  (recenter (/ (window-height) 2)))
-
-(defun helm-flymake-action-goto-line (candidate)
-  "Switch to line of CANDIDATE."
-  (helm-flymake-candidate-macro candidate
-    (helm-flymake-goto-line lineno)
-    (helm-flymake-recenter)))
-
-(defvar helm-source-flymake-warning
-  '((name . "Flymake Warning")
-    (init . (lambda () (helm-flymake-init "w")))
-    (candidates-in-buffer)
-    (candidate-transformer . (lambda (cands) (delete "" cands)))
-    (type . line)
-    (action . (("Goto Line" . helm-flymake-action-goto-line)))
-    (recenter)))
-
-(defvar helm-source-flymake-error
-  '((name . "Flymake Error")
-    (init . (lambda () (helm-flymake-init "e")))
-    (candidates-in-buffer)
-    (candidate-transformer . (lambda (cands) (delete "" cands)))
-    (type . line)
-    (action . (("Goto Line" . helm-flymake-action-goto-line)))
-    (recenter)))
+(defun helm-flymake--transforme-to-candidate (diag)
+  (let* (msg
+	 (beg (flymake-diagnostic-beg diag))
+	 (end (flymake-diagnostic-end diag))
+	 (type (flymake-diagnostic-type diag))
+	 (text (flymake-diagnostic-text diag))
+	 (line (line-number-at-pos beg)))
+    (setq msg (format "%-8d  %-12s    %s" line (helm-flymake--format-type type) text))
+    (cons msg diag)))
 
 ;;;###autoload
-(defun helm-flymake (arg)
-  "helm interface for flymake."
-  (interactive "P")
-  (let ((buf (get-buffer-create helm-flymake-buffer))
-        (linum (format "%4d:" (line-number-at-pos (point)))))
-    (helm :sources '(helm-source-flymake-warning
-                     helm-source-flymake-error)
-          :buffer buf
-          :input (and arg linum))))
+(defun helm-flymake ()
+  "Helm interface for flymake."
+  (interactive)
+  (helm :sources (helm-build-sync-source helm-flymake-source-name
+                   :candidates (mapcar #'helm-flymake--transforme-to-candidate (flymake-diagnostics))
+                   :action 'helm-flymake-actions)
+        :quit-if-no-candidate (lambda ()
+                                (message "No flymake diagnostics in this buffer"))
+        :buffer "*helm flymake*"))
 
 (provide 'helm-flymake)
 
