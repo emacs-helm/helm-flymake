@@ -81,6 +81,10 @@
 (require 'flymake)
 (require 'helm)
 
+(defgroup helm-flymake nil
+  "Helm for flymake."
+  :group 'helm)
+
 (defcustom helm-flymake-actions
   '(("Goto flymake diagnostic" . helm-flymake-action-goto))
   "Actions for helm-flymake."
@@ -116,7 +120,6 @@
 (defun helm-flymake--transforme-to-candidate (diag)
   (let* (msg
 	 (beg (flymake-diagnostic-beg diag))
-	 (end (flymake-diagnostic-end diag))
 	 (type (flymake-diagnostic-type diag))
 	 (text (flymake-diagnostic-text diag))
 	 (line (line-number-at-pos beg)))
