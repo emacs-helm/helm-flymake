@@ -134,6 +134,7 @@
   (helm :sources (helm-build-sync-source helm-flymake-source-name
                    :candidates (mapcar #'helm-flymake--transforme-to-candidate
                                        (flymake-diagnostics))
+                   :multiline t
                    :action
                    'helm-flymake-actions)
         :quit-if-no-candidate
